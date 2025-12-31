@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Clock, Ticket, MapPin, Phone, Mail, Globe, 
-  Calendar, Shield, Camera, ArrowLeft 
+import {
+  Clock, Ticket, MapPin, Phone, Mail, Globe,
+  Calendar, Shield, Camera, ArrowLeft
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import MiniMapa from '@/components/mapa/MiniMapa'; // ✅ NUEVO IMPORT
 
 async function getSitio(slug) {
   const res = await fetch(`http://localhost:3000/api/sitios/${slug}`, {
@@ -16,7 +17,7 @@ async function getSitio(slug) {
 }
 
 export default async function SitioDetallePage({ params }) {
-  const { slug } = await params;  // ✅ Correcto - agregamos "await"
+  const { slug } = await params;
   const sitio = await getSitio(slug);
 
   if (!sitio) {
@@ -67,23 +68,40 @@ export default async function SitioDetallePage({ params }) {
           <div className="lg:col-span-2 space-y-8">
             {/* Descripción */}
             <section>
-              <h2 className="text-2xl font-bold mb-4">Acerca de este sitio</h2>
+              <h2 className="text-2xl font-bold mb-4">
+                Acerca de este sitio
+              </h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                 {sitio.descripcionCompleta || sitio.descripcionCorta}
               </p>
             </section>
 
-            {/* Ubicación */}
+            {/* 📍 Ubicación */}
             <section>
               <h2 className="text-2xl font-bold mb-4">Ubicación</h2>
+
+              {/* Mini mapa */}
+              <div className="mb-4 rounded-lg overflow-hidden">
+                <MiniMapa sitio={sitio} />
+              </div>
+
               <div className="bg-gray-100 p-6 rounded-lg">
                 <div className="flex items-start gap-3 mb-4">
-                  <MapPin size={24} className="text-amber-700 flex-shrink-0 mt-1" />
+                  <MapPin
+                    size={24}
+                    className="text-amber-700 flex-shrink-0 mt-1"
+                  />
                   <div>
-                    <p className="font-semibold mb-1">{sitio.direccion}</p>
+                    <p className="font-semibold mb-1">
+                      {sitio.direccion}
+                    </p>
+
                     {sitio.distrito && (
-                      <p className="text-gray-600 text-sm">{sitio.distrito}</p>
+                      <p className="text-gray-600 text-sm">
+                        {sitio.distrito}
+                      </p>
                     )}
+
                     {sitio.referencia && (
                       <p className="text-gray-600 text-sm mt-2">
                         {sitio.referencia}
@@ -93,8 +111,12 @@ export default async function SitioDetallePage({ params }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Button href="/mapa" variant="primary" className="w-full">
-                    Ver en mapa
+                  <Button
+                    href="/mapa"
+                    variant="primary"
+                    className="w-full"
+                  >
+                    Ver en mapa completo
                   </Button>
 
                   <a
@@ -113,7 +135,9 @@ export default async function SitioDetallePage({ params }) {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4 space-y-6">
-              <h3 className="text-xl font-bold mb-4">Información Práctica</h3>
+              <h3 className="text-xl font-bold mb-4">
+                Información Práctica
+              </h3>
 
               {sitio.horario && (
                 <div>
@@ -121,7 +145,9 @@ export default async function SitioDetallePage({ params }) {
                     <Clock size={20} className="text-amber-700" />
                     <h4 className="font-semibold">Horario</h4>
                   </div>
-                  <p className="text-gray-700">{sitio.horario}</p>
+                  <p className="text-gray-700">
+                    {sitio.horario}
+                  </p>
                 </div>
               )}
 
