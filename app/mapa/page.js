@@ -5,7 +5,7 @@ import Link from 'next/link';
 import MapaWrapper from '@/components/mapa/MapaWrapper';
 import FiltrosCapas from '@/components/mapa/FiltrosCapas';
 import Loader from '@/components/ui/Loader';
-import { MapPin, List, Navigation, X } from 'lucide-react';
+import { MapPin, List, Navigation, X, Radius } from 'lucide-react';
 
 export default function MapaPage() {
   const [sitios, setSitios] = useState([]);
@@ -19,13 +19,13 @@ export default function MapaPage() {
   });
 
   const [mostrarLista, setMostrarLista] = useState(false);
-
-  // 📍 Ubicación del usuario
   const [ubicacionUsuario, setUbicacionUsuario] = useState(null);
-
   const [buscandoCercanos, setBuscandoCercanos] = useState(false);
   const [sitiosCercanos, setSitiosCercanos] = useState([]);
   const [mostrarCercanos, setMostrarCercanos] = useState(false);
+  
+  // 🆕 Estado para el radio del círculo
+  const [radioCirculo, setRadioCirculo] = useState(1000); // metros
 
   useEffect(() => {
     cargarTodosSitios();
@@ -69,7 +69,6 @@ export default function MapaPage() {
     setSitiosFiltrados(filtrados);
   }
 
-  // ✅ FUNCIÓN ACTUALIZADA SEGÚN INDICACIÓN 3️⃣
   async function buscarSitiosCercanos() {
     setBuscandoCercanos(true);
 
@@ -82,13 +81,15 @@ export default function MapaPage() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-
-        // 👇 OBLIGATORIO: guardar ubicación del usuario
-        setUbicacionUsuario([latitude, longitude]);
+        
+        // ✅ FIX: Guardar ubicación ANTES de hacer fetch
+        const ubicacion = [latitude, longitude];
+        setUbicacionUsuario(ubicacion);
 
         try {
+          const radioKm = radioCirculo / 1000;
           const res = await fetch(
-            `/api/sitios/cercanos?lat=${latitude}&lng=${longitude}&radio=2`
+            `/api/sitios/cercanos?lat=${latitude}&lng=${longitude}&radio=${radioKm}`
           );
           const data = await res.json();
 
@@ -103,8 +104,24 @@ export default function MapaPage() {
       },
       (error) => {
         console.error('Error de geolocalización:', error);
-        alert('No se pudo obtener tu ubicación');
+        
+        // ✅ Mensajes más específicos
+        let mensaje = 'No se pudo obtener tu ubicación';
+        if (error.code === error.PERMISSION_DENIED) {
+          mensaje = 'Permiso de ubicación denegado. Por favor, activa la geolocalización en tu navegador.';
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          mensaje = 'Ubicación no disponible. Verifica tu conexión GPS.';
+        } else if (error.code === error.TIMEOUT) {
+          mensaje = 'Tiempo de espera agotado. Intenta de nuevo.';
+        }
+        
+        alert(mensaje);
         setBuscandoCercanos(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   }
@@ -127,7 +144,23 @@ export default function MapaPage() {
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {/* 🆕 Control de radio */}
+              <div className="bg-white text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2">
+                <Radius size={20} className="text-amber-700" />
+                <span className="text-sm font-medium">Radio:</span>
+                <select 
+                  value={radioCirculo}
+                  onChange={(e) => setRadioCirculo(Number(e.target.value))}
+                  className="border-none bg-transparent font-semibold text-amber-700 cursor-pointer"
+                >
+                  <option value={500}>500m</option>
+                  <option value={1000}>1km</option>
+                  <option value={2000}>2km</option>
+                  <option value={5000}>5km</option>
+                </select>
+              </div>
+
               <button
                 onClick={buscarSitiosCercanos}
                 disabled={buscandoCercanos}
@@ -155,45 +188,66 @@ export default function MapaPage() {
 
         {/* PANEL DE CERCANOS */}
         {mostrarCercanos && (
-          <div className="absolute top-20 left-4 bg-white rounded-lg shadow-xl z-[1000] max-w-sm max-h-96 overflow-y-auto">
-            <div className="p-4 border-b flex justify-between">
-              <h3 className="font-bold">
-                Sitios cerca de ti ({sitiosCercanos.length})
-              </h3>
-              <button onClick={() => setMostrarCercanos(false)}>
+          <div className="absolute top-4 left-4 bg-white rounded-lg shadow-xl z-[1000] max-w-sm max-h-96 overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center bg-gradient-to-r from-blue-50 to-blue-100">
+              <div>
+                <h3 className="font-bold text-gray-900">
+                  📍 Sitios cerca de ti
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Radio de {radioCirculo}m ({sitiosCercanos.length} resultados)
+                </p>
+              </div>
+              <button 
+                onClick={() => setMostrarCercanos(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <X size={20} />
               </button>
             </div>
 
             <div className="divide-y">
-              {sitiosCercanos.map(({ sitio, distanciaKm, distanciaMetros }) => (
-                <Link
-                  key={sitio.id}
-                  href={`/${
-                    sitio.tipoSitio === 'servicio' ? 'servicios' : 'sitios'
-                  }/${sitio.slug}`}
-                  className="block p-4 hover:bg-gray-50"
-                >
-                  <div className="flex gap-3">
-                    <img
-                      src={sitio.imagenPrincipal}
-                      alt={sitio.nombre}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                    <div>
-                      <h4 className="font-semibold text-sm truncate">
-                        {sitio.nombre}
-                      </h4>
-                      <p className="text-xs text-amber-700 font-semibold">
-                        📍{' '}
-                        {distanciaKm < 1
-                          ? `${distanciaMetros} m`
-                          : `${distanciaKm} km`}
-                      </p>
+              {sitiosCercanos.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  <p className="text-sm">No hay sitios en este radio</p>
+                  <p className="text-xs mt-1">Intenta aumentar el radio de búsqueda</p>
+                </div>
+              ) : (
+                sitiosCercanos.map(({ sitio, distanciaKm, distanciaMetros }) => (
+                  <Link
+                    key={sitio.id}
+                    href={`/${
+                      sitio.tipoSitio === 'servicio' ? 'servicios' : 'sitios'
+                    }/${sitio.slug}`}
+                    className="block p-4 hover:bg-gray-50 transition"
+                  >
+                    <div className="flex gap-3">
+                      <img
+                        src={sitio.imagenPrincipal}
+                        alt={sitio.nombre}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm truncate">
+                          {sitio.nombre}
+                        </h4>
+                        <p 
+                          className="text-xs px-2 py-0.5 rounded inline-block text-white mt-1"
+                          style={{ backgroundColor: sitio.categoria.color }}
+                        >
+                          {sitio.categoria.nombre}
+                        </p>
+                        <p className="text-xs text-amber-700 font-semibold mt-1">
+                          📍{' '}
+                          {distanciaKm < 1
+                            ? `${distanciaMetros} m`
+                            : `${distanciaKm} km`}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -203,6 +257,7 @@ export default function MapaPage() {
           sitios={sitiosFiltrados}
           altura="100%"
           ubicacionUsuario={ubicacionUsuario}
+          radioCirculo={radioCirculo}
         />
       </div>
     </div>

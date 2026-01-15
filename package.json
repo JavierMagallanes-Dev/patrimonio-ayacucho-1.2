@@ -12,11 +12,15 @@
   "dependencies": {
     "@next/bundle-analyzer": "^16.1.1",
     "leaflet": "^1.9.4",
+    "leaflet-control-geocoder": "^3.3.1",
+    "leaflet-fullscreen": "^1.0.2",
+    "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "react-leaflet-cluster": "^4.0.0"
   },
   "devDependencies": {
     "@prisma/client": "^5.22.0",
@@ -27,7 +31,4 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^4"
   }
-  
-  
-
 }
